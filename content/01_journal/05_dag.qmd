@@ -1,7 +1,104 @@
 ---
 title: "Directed Acyclic Graphs"
 ---
+```{r}
+#1
+# Load packages
+library(dagitty)
+library(ggdag)
 
-::: callout-note
-You can delete everything in here and start fresh.
-:::
+# create DAG from dagitty
+dag_model <- 'dag {
+bb="0,0,1,1"
+D [exposure,pos="0.075,0.4"]
+Y [outcome,pos="0.4,0.4"]
+L [pos="0.2,0.2"]
+S [pos="0.3,0.5"]
+D -> Y
+D -> L
+S -> D
+S -> Y
+L -> S
+}
+'
+
+# draw DAG
+ggdag(dag_model) +
+  theme_dag() + # custom theme, can be left out
+  geom_dag_edges(edge_color = "black")
+
+```
+D represents the treatment variable (having parking spots),<br>
+Y represents the outcome variable (sales),<br>
+L represents the location, and<br>
+S represents the store.<br>
+```{r}
+data <- readRDS("C:/Users/Anjali/Downloads/Causal_Data_Science_Data (1)/Causal_Data_Science_Data/customer_sat.rds")
+
+#2.1
+#
+model1 <- lm(satisfaction ~ follow_ups, data = data)
+summary(model1)
+
+```
+```{r}
+#2.2
+# Assuming 'subscription' is another column in your dataset
+model2 <- lm(satisfaction ~ follow_ups + subscription, data = data)
+summary(model2)
+```
+3.
+**Model 1**:<br>
+**Coefficients**:<br>
+Intercept: 78.8860<br>
+Follow-ups: -3.3093<br>
+**Interpretation**:<br>
+The intercept (78.8860) represents the estimated satisfaction when the number of follow-up calls is zero.<br>
+The coefficient for follow-ups (-3.3093) suggests that, on average, for each additional follow-up call, satisfaction decreases by approximately 3.31 units.<br>
+**Statistical Significance**:<br>
+Both intercept and follow-ups have p-values less than 0.05, indicating statistical significance.<br>
+**Model Fit**:<br>
+R²=0.658: Approximately 65.8% of the variability in satisfaction is explained by the number of follow-up calls.<br>
+<br>
+**Model 2**:<br>
+**Coefficients**:<br>
+Intercept: 26.7667<br>
+Follow-ups: 2.1944<br>
+Subscription Premium: 44.7222<br>
+Subscription Premium+: 18.0722<br>
+**Interpretation**:<br>
+The intercept (26.7667) represents the estimated satisfaction when follow-up calls and all subscription variables are zero.<br>
+The coefficient for follow-ups (2.1944) suggests that, on average, for each additional follow-up call, satisfaction increases by approximately 2.19 units.<br>
+The coefficients for subscription levels indicate the change in satisfaction compared to the baseline (assumed to be subscription Starter).<br>
+**Statistical Significance**:<br>
+All coefficients have p-values less than 0.05, indicating statistical significance.<br>
+**Model Fit**:<br>
+R² = 0.9597 : Approximately 95.97% of the variability in satisfaction is explained by follow-up calls and subscription levels.<br>
+<br>
+Model 2 provides a more comprehensive understanding of the factors influencing satisfaction as it includes both follow-up calls and subscription levels.<br>
+In Model 2, the positive coefficient for follow-ups suggests that more follow-up calls are associated with higher satisfaction.<br>
+The subscription coefficients in Model 2 indicate that, compared to the baseline (Starter), both Premium and Premium+ subscriptions are associated with higher satisfaction.<br>
+Overall, Model 2 suggests that, when accounting for subscription levels, both follow-up calls and subscription levels significantly contribute to explaining satisfaction. The high R² value in Model 2 indicates that the combination of follow-up calls and subscription levels explains a large portion of the variability in satisfaction
+
+```{r}
+#4
+# Assuming 'follow_ups', 'satisfaction', and 'subscription' are column names in dataset
+library(dagitty)
+library(ggdag)
+
+# Create a DAG model manually
+dag_model <- dagitty('dag {
+  follow_ups [exposure,pos="1,1"]
+  satisfaction [outcome,pos="2,1"]
+  subscription [pos="3,1"]
+
+  subscription -> satisfaction
+  follow_ups -> satisfaction
+}')
+
+# plot adjustment sets
+ggdag_adjustment_set(dag_model, shadow = T) +
+  theme_minimal() + # custom theme, can be left out
+  geom_dag_edges(edge_color = "white")
+```
+
