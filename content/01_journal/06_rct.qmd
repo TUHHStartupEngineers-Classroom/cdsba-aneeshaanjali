@@ -2,6 +2,75 @@
 title: "Randomized Controlled Trials"
 ---
 
-::: callout-note
-You can delete everything in here and start fresh.
-:::
+```{r}
+#1
+
+library(dplyr)
+library(ggplot2)
+
+data <- readRDS("C:/Users/Anjali/Downloads/Causal_Data_Science_Data (1)/Causal_Data_Science_Data/abtest_online.rds")
+
+treatment_data <- subset(data, chatbot == 1)
+control_data <- subset(data, chatbot == 0)
+
+# Convert 'previous_visits' to numeric if it's not already
+data <- data %>%
+  mutate(previous_visits = as.numeric(previous_visit))
+
+# Visualize covariate distributions
+# Using ggplot2 for a more flexible and customizable approach
+ggplot(data, aes(x = previous_visit)) +
+  geom_histogram(binwidth = 1, fill = "lightblue", color = "black") +
+  facet_wrap(~ chatbot, scales = "free") +
+  labs(title = "Distribution of Previous Visits by Group", x = "Previous Visits")
+
+# Similar plot for 'mobile_device' as a bar plot
+ggplot(data, aes(x = factor(mobile_device), fill = factor(mobile_device))) +
+  geom_bar() +
+  facet_wrap(~ chatbot) +
+  labs(title = "Distribution of Mobile Device by Group", x = "Mobile Device", y = "Count")
+
+```
+```{r}
+#2
+model <- lm(purchase_amount ~ ., data = data)
+summary(model)
+
+```
+```{r}
+#3
+
+model_interaction <- lm(purchase_amount ~ chatbot * mobile_device + previous_visit + ip + purchase, data = data)
+
+# Print the summary of the interaction model
+summary(model_interaction)
+
+
+# Assuming 'mobile_device' is a binary variable (TRUE/FALSE)
+# Compute the CATE for mobile users
+CATE_mobile <- coef(model_interaction)["chatbot"] + coef(model_interaction)["chatbot:mobile_deviceTRUE"]
+
+# Print the CATE for mobile users
+cat("CATE for Mobile Users:", CATE_mobile, "\n")
+
+```
+```{r}
+#4
+logistic_model <- glm(purchase ~ chatbot + mobile_device + previous_visit + ip + purchase_amount, family = "binomial", data = data)
+summary(logistic_model)
+
+# Extract the coefficient for chatbot
+coef_chatbot <- coef(logistic_model)["chatbot"]
+
+# Exponentiate the coefficient to get the odds ratio
+odds_ratio_chatbot <- exp(coef_chatbot)
+
+# Print the results
+cat("Coefficient for chatbot:", coef_chatbot, "\n")
+cat("Odds Ratio for chatbot:", odds_ratio_chatbot, "\n")
+
+
+```
+
+
+
