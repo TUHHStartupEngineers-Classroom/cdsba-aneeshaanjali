@@ -2,6 +2,72 @@
 title: "Matching and Subclassification"
 ---
 
-::: callout-note
-You can delete everything in here and start fresh.
-:::
+```{r}
+data <- readRDS("C:/Users/Anjali/Downloads/Causal_Data_Science_Data (1)/Causal_Data_Science_Data/membership.rds")
+
+# Install and load the 'dagitty' package
+library(dagitty)
+
+# Create a DAG
+dag <- dagitty("dag {
+  age -> plus_membership
+  sex -> plus_membership
+  pre_avg_purch -> plus_membership
+  plus_membership -> sales
+}")
+
+# Plot the DAG
+plot(dag)
+
+# Save the plot as an image file (e.g., PNG)
+png("dag_plot.png", width = 800, height = 600, units = "px", pointsize = 12)
+plot(dag)
+dev.off()
+
+```
+```{r}
+#2
+
+# Create a binary variable indicating treatment (1 for cardholders) or control (0 for non-cardholders)
+data$treatment <- ifelse(data$card == 1, 1, 0)
+
+# Separate the data into treatment and control groups
+treatment_group <- data[data$treatment == 1, ]
+control_group <- data[data$treatment == 0, ]
+
+# Compute the average sales for each group
+average_sales_treatment <- mean(treatment_group$sales)
+average_sales_control <- mean(control_group$sales)
+
+# Compute the naive estimate of the ATE
+naive_ate <- average_sales_treatment - average_sales_control
+
+# Print or return the naive estimate of ATE
+cat("Naive Estimate of ATE:", naive_ate, "\n")
+
+
+```
+```{r}
+#3.1
+library(Matching)
+
+
+# Create a binary variable indicating treatment (1 for cardholders) or control (0 for non-cardholders)
+data$treatment <- ifelse(data$card == 1, 1, 0)
+
+# Perform exact matching on covariates
+exact_match_data <- Match(Y = data$sales, Tr = data$treatment, X = data[, c("age", "sex", "pre_avg_purch")], exact = TRUE)
+
+# Obtain matched data using match.data
+matched_data <- match.data(exact_match_data)
+
+# Calculate the average treatment effect
+exact_ate <- mean(matched_data$sales[matched_data$treatment == 1]) - mean(matched_data$sales[matched_data$treatment == 0])
+
+# Print or return the exact estimate of ATE
+cat("(Coarsened) Exact Matching Estimate of ATE:", exact_ate, "\n")
+
+```
+
+
+
