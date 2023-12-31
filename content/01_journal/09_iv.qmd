@@ -2,6 +2,88 @@
 title: "Instrumental Variables"
 ---
 
-::: callout-note
-You can delete everything in here and start fresh.
-:::
+```{r}
+#1
+data <- readRDS("C:/Users/Anjali/Downloads/Causal_Data_Science_Data (1)/Causal_Data_Science_Data/rand_enc.rds")
+
+#library(dagitty)
+
+# Define the DAG
+#dag <- dagitty('
+#  dag {
+#    rand_enc [pos="0,0"]
+#    used_ftr [pos="1,0"]
+#    time_spent [pos="2,0"]
+ #   
+  #  # Edges
+   # rand_enc -> used_ftr
+    #rand_enc -> time_spent
+    #used_ftr -> time_spent
+  #}
+#')
+
+
+#plot(dag)
+
+```
+```{r}
+#2
+
+naive_estimate <- tapply(data$time_spent, data$rand_enc, mean)
+
+# Print the results
+cat("Naive Estimate for Encouraged Users:", naive_estimate[2], "\n")
+cat("Naive Estimate for Not Encouraged Users:", naive_estimate[1], "\n")
+
+# Assuming your data frame is named 'df'
+model <- lm(time_spent ~ rand_enc + used_ftr, data = data)
+
+# Extract coefficients
+coefficients <- coef(model)
+
+# Print the results
+cat("Biased Estimate for Encouraged Users:", coefficients["rand_enc"], "\n")
+
+
+```
+```{r}
+#3
+
+correlation_instrument1_endogenous <- cor(data$rand_enc, data$time_spent)
+correlation_instrument2_endogenous <- cor(data$used_ftr, data$time_spent)
+
+model_endogenous <- lm(time_spent ~ rand_enc + used_ftr, data = data)
+residuals <- residuals(model_endogenous)
+
+correlation_instrument1_residuals <- cor(data$rand_enc, residuals)
+correlation_instrument2_residuals <- cor(data$used_ftr, residuals)
+
+correlation_endogenous_dependent <- cor(data$time_spent, data$time_spent)
+
+# Print the results
+cat("Correlation between instrument1 and endogenous variable:", correlation_instrument1_endogenous, "\n")
+cat("Correlation between instrument2 and endogenous variable:", correlation_instrument2_endogenous, "\n")
+
+cat("Correlation between instrument1 and residuals:", correlation_instrument1_residuals, "\n")
+cat("Correlation between instrument2 and residuals:", correlation_instrument2_residuals, "\n")
+
+cat("Correlation between endogenous variable and dependent variable:", correlation_endogenous_dependent, "\n")
+
+```
+```{r}
+#4
+
+# Load the ivreg library
+library(ivreg)
+
+# IV estimate using 2SLS
+iv_model <- ivreg(time_spent ~ used_ftr | rand_enc, data = data)
+iv_estimate <- coef(iv_model)["used_ftr"]
+
+# Print the results
+cat("IV Estimate (2SLS):", iv_estimate, "\n")
+
+```
+
+
+
