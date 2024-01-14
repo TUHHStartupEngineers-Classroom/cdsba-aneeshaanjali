@@ -36,7 +36,88 @@ naive_ate <- avg_purchase_treatment - avg_purchase_control
 cat("Naive Estimate of ATE:", naive_ate, "\n")
 
 ```
+```{r}
+#3.1
 
+# Install and load the 'MatchIt' package if not already installed
+if (!requireNamespace("MatchIt", quietly = TRUE)) {
+  install.packages("MatchIt")
+}
+library(MatchIt)
+
+# Create a data frame with the treatment variable ('card') and the covariates
+match_data <- data.frame(card = data$card, age = data$age, sex = data$sex, pre_avg_purch = data$pre_avg_purch, avg_purch = data$avg_purch)
+
+# Perform Coarsened Exact Matching with MatchIt
+cem_result <- matchit(card ~ age + sex + pre_avg_purch + avg_purch, data = match_data, method = "cem")
+
+# Print summary
+summary(cem_result)
+
+treated_outcome <- match_data$avg_purch[match_data$card == 1]
+control_outcome <- match_data$avg_purch[match_data$card == 0]
+
+# Calculate ATE
+ate <- mean(treated_outcome) - mean(control_outcome)
+
+# Print or return the exact estimate of ATE
+cat("(Coarsened) Exact Matching Estimate of ATE:", ate, "\n")
+
+```
+
+```{r}
+#3.2
+
+# Assuming 'data' is your dataset
+library(MatchIt)
+nn_matchit <- matchit(card ~ age + sex + pre_avg_purch + avg_purch,
+                      data = data,
+                      method = "nearest",
+                      distance = "mahalanobis",
+                      replace = TRUE)
+
+
+
+summary(nn_matchit)
+
+# Use matched data
+data_nn <- match.data(nn_matchit)
+
+# Estimation using linear regression
+model_nn <- lm(avg_purch ~ card, data = data_nn)
+
+# Display summary of the regression model
+summary(model_nn)
+
+```
+```{r}
+#3.3
+
+library(Matching)
+
+library(dplyr)
+
+# Assuming 'data' is your dataset
+propensity_model <- glm(card ~ age + sex + pre_avg_purch + avg_purch, 
+                         data = data, 
+                         family = "binomial"(link = "logit"))
+# Add propensities to table
+data_ipw <- data %>% mutate(propensity = predict(propensity_model, type = "response"))
+
+# Extend data by IPW scores
+data_ipw <- data_ipw %>% mutate(
+  ipw = (card / propensity) + ((1 - card) / (1 - propensity))
+)
+
+# Look at data with IPW scores
+data_ipw %>% 
+  select(card, age, sex, pre_avg_purch, avg_purch, propensity, ipw)
+
+# (2) Estimation
+ipw_model <- lm(avg_purch ~ card, data = data_ipw, weights = ipw)
+summary(ipw_model)
+
+```
 
 
 
