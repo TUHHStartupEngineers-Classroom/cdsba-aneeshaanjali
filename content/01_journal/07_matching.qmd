@@ -45,23 +45,18 @@ if (!requireNamespace("MatchIt", quietly = TRUE)) {
 }
 library(MatchIt)
 
-# Create a data frame with the treatment variable ('card') and the covariates
-match_data <- data.frame(card = data$card, age = data$age, sex = data$sex, pre_avg_purch = data$pre_avg_purch, avg_purch = data$avg_purch)
-
 # Perform Coarsened Exact Matching with MatchIt
-cem_result <- matchit(card ~ age + sex + pre_avg_purch + avg_purch, data = match_data, method = "cem")
+cem <- matchit(card ~ age + pre_avg_purch, data = data, method = "cem", estimand = 'ATE')
 
 # Print summary
-summary(cem_result)
+summary(cem)
 
-treated_outcome <- match_data$avg_purch[match_data$card == 1]
-control_outcome <- match_data$avg_purch[match_data$card == 0]
+# Use matched data
+df_cem <- match.data(cem)
 
-# Calculate ATE
-ate <- mean(treated_outcome) - mean(control_outcome)
-
-# Print or return the exact estimate of ATE
-cat("(Coarsened) Exact Matching Estimate of ATE:", ate, "\n")
+# (2) Estimation
+model_cem <- lm(avg_purch ~ card, data = df_cem, weights = weights)
+summary(model_cem)
 
 ```
 
@@ -70,13 +65,11 @@ cat("(Coarsened) Exact Matching Estimate of ATE:", ate, "\n")
 
 # Assuming 'data' is your dataset
 library(MatchIt)
-nn_matchit <- matchit(card ~ age + sex + pre_avg_purch + avg_purch,
+nn_matchit <- matchit(card ~ age + pre_avg_purch,
                       data = data,
                       method = "nearest",
                       distance = "mahalanobis",
-                      replace = TRUE)
-
-
+                      replace = T)
 
 summary(nn_matchit)
 
@@ -84,7 +77,7 @@ summary(nn_matchit)
 data_nn <- match.data(nn_matchit)
 
 # Estimation using linear regression
-model_nn <- lm(avg_purch ~ card, data = data_nn)
+model_nn <- lm(avg_purch ~ card, data = data_nn, weights = weights)
 
 # Display summary of the regression model
 summary(model_nn)
@@ -98,24 +91,27 @@ library(Matching)
 library(dplyr)
 
 # Assuming 'data' is your dataset
-propensity_model <- glm(card ~ age + sex + pre_avg_purch + avg_purch, 
+model_prop <- glm(card ~ age + pre_avg_purch, 
                          data = data, 
                          family = "binomial"(link = "logit"))
+summary(model_prop)
+
 # Add propensities to table
-data_ipw <- data %>% mutate(propensity = predict(propensity_model, type = "response"))
+df_aug <- data %>% mutate(propensity = predict(model_prop, type = "response"))
 
 # Extend data by IPW scores
-data_ipw <- data_ipw %>% mutate(
-  ipw = (card / propensity) + ((1 - card) / (1 - propensity))
-)
+df_ipw <- df_aug %>% mutate(
+  ipw = (card/propensity) + ((1-card) / (1-propensity)))
 
 # Look at data with IPW scores
-data_ipw %>% 
-  select(card, age, sex, pre_avg_purch, avg_purch, propensity, ipw)
+df_ipw %>% 
+  select(card, age, pre_avg_purch, propensity, ipw)
 
 # (2) Estimation
-ipw_model <- lm(avg_purch ~ card, data = data_ipw, weights = ipw)
-summary(ipw_model)
+model_ipw <- lm(avg_purch ~ card,
+                data = df_ipw, 
+                weights = ipw)
+summary(model_ipw)
 
 ```
 
